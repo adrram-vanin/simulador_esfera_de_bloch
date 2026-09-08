@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador Didático da Esfera de Bloch</title>
+  <style>
+    :root{
+      --bg:#f4f6f8;
+      --panel:#ffffff;
+      --text:#18212b;
+      --muted:#607080;
+      --border:#d9e0e6;
+      --accent:#2f6fed;
+      --accent2:#7048e8;
+      --ok:#2b8a3e;
+      --warn:#c97a00;
+      --shadow:0 10px 30px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:18px 24px;
+      background:var(--panel);
+      border-bottom:1px solid var(--border);
+      position:sticky;
+      top:0;
+      z-index:10;
+    }
+    header h1{
+      margin:0 0 4px;
+      font-size:24px;
+    }
+    header p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:360px minmax(420px,1fr) 390px;
+      gap:14px;
+      padding:14px;
+      min-height:calc(100vh - 86px);
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:14px;
+      overflow:hidden;
+    }
+    h2{
+      font-size:18px;
+      margin:0 0 10px;
+    }
+    h3{
+      font-size:15px;
+      margin:16px 0 8px;
+    }
+    .note{
+      background:#f8fafc;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px 12px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+      margin-bottom:12px;
+    }
+    .tabs{
+      display:flex;
+      gap:6px;
+      margin-bottom:10px;
+      flex-wrap:wrap;
+    }
+    .tabbtn{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:10px;
+      padding:7px 10px;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .tabbtn.active{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+    .tabcontent{display:none}
+    .tabcontent.active{display:block}
+    .control{
+      margin:12px 0;
+    }
+    .control-row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      font-size:13px;
+      margin-bottom:4px;
+    }
+    .control-row span:last-child{
+      font-family:Consolas,monospace;
+      color:var(--accent);
+      min-width:92px;
+      text-align:right;
+    }
+    input[type="range"]{
+      width:100%;
+      accent-color:var(--accent);
+    }
+    .button-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:7px;
+    }
+    button.action{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:10px;
+      padding:9px;
+      cursor:pointer;
+      font-weight:700;
+      transition:.15s;
+    }
+    button.action:hover{
+      border-color:var(--accent);
+      transform:translateY(-1px);
+    }
+    button.action.primary{
+      background:var(--accent);
+      color:white;
+      border-color:var(--accent);
+    }
+    .sphere-wrap{
+      height:100%;
+      min-height:620px;
+      display:flex;
+      flex-direction:column;
+    }
+    #blochCanvas{
+      width:100%;
+      flex:1;
+      min-height:560px;
+      background:linear-gradient(#fbfdff,#f2f6fb);
+      border:1px solid var(--border);
+      border-radius:14px;
+      cursor:grab;
+      touch-action:none;
+    }
+    #blochCanvas:active{cursor:grabbing}
+    .canvas-help{
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+      margin-top:8px;
+    }
+    pre{
+      margin:0;
+      white-space:pre-wrap;
+      word-break:break-word;
+      font-family:Consolas,Menlo,monospace;
+      font-size:12px;
+      line-height:1.45;
+      background:#0f1720;
+      color:#e6edf3;
+      padding:12px;
+      border-radius:12px;
+      overflow:auto;
+    }
+    .results{
+      font-family:Consolas,Menlo,monospace;
+      font-size:12px;
+      line-height:1.5;
+      white-space:pre-wrap;
+      background:#fafcfe;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px;
+      max-height:490px;
+      overflow:auto;
+    }
+    .small{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+    .footer-actions{
+      display:flex;
+      gap:8px;
+      margin-top:12px;
+    }
+    .footer-actions button{flex:1}
+    .badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      background:#eef4ff;
+      color:var(--accent);
+      border:1px solid #cfe0ff;
+      font-size:12px;
+      font-weight:700;
+      margin-bottom:8px;
+    }
+    @media (max-width:1200px){
+      .layout{grid-template-columns:340px 1fr}
+      .layout > .panel:last-child{grid-column:1 / -1}
+    }
+    @media (max-width:800px){
+      .layout{grid-template-columns:1fr}
+      .sphere-wrap{min-height:520px}
+      #blochCanvas{min-height:460px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Simulador Didático da Esfera de Bloch</h1>
+  <p>Versão web em arquivo único — ideal para GitHub Pages.</p>
+</header>
+
+<main class="layout">
+  <section class="panel">
+    <span class="badge">1 qubit · estado puro</span>
+    <h2>Controles</h2>
+
+    <div class="note">
+      <b>Decisão didática:</b> |ψ⟩ é o estado, não um parâmetro. Um qubit puro possui duas amplitudes complexas
+      <i>a</i> e <i>b</i>, com |a|²+|b|²=1. Não há coeficiente <i>c</i> em um qubit; isso já seria um sistema de três níveis.
+    </div>
+
+    <div class="tabs">
+      <button class="tabbtn active" data-tab="angles">θ, φ, γ</button>
+      <button class="tabbtn" data-tab="probs">Probabilidades</button>
+      <button class="tabbtn" data-tab="amps">Amplitudes</button>
+    </div>
+
+    <div id="angles" class="tabcontent active">
+      <div class="control">
+        <div class="control-row"><span>θ — ângulo polar</span><span id="thetaVal"></span></div>
+        <input id="theta" type="range" min="0" max="3.141592653589793" step="0.001" value="0">
+      </div>
+      <div class="control">
+        <div class="control-row"><span>φ — fase relativa</span><span id="phiVal"></span></div>
+        <input id="phi" type="range" min="-3.141592653589793" max="3.141592653589793" step="0.001" value="0">
+      </div>
+      <div class="control">
+        <div class="control-row"><span>γ — fase global</span><span id="gammaVal"></span></div>
+        <input id="gamma" type="range" min="-3.141592653589793" max="3.141592653589793" step="0.001" value="0">
+      </div>
+      <div class="small">Mover apenas γ altera as amplitudes, mas não move o vetor na esfera.</div>
+    </div>
+
+    <div id="probs" class="tabcontent">
+      <div class="control">
+        <div class="control-row"><span>P(0)</span><span id="p0Val"></span></div>
+        <input id="p0" type="range" min="0" max="1" step="0.001" value="1">
+      </div>
+      <div class="small" id="p1Text">P(1) = 0.000</div>
+      <div class="control">
+        <div class="control-row"><span>fase relativa φ</span><span id="probPhiVal"></span></div>
+        <input id="probPhi" type="range" min="-3.141592653589793" max="3.141592653589793" step="0.001" value="0">
+      </div>
+      <div class="note">
+        P(0) e P(1) não determinam sozinhas o estado. A fase relativa diferencia, por exemplo, |+⟩ de |+i⟩.
+      </div>
+    </div>
+
+    <div id="amps" class="tabcontent">
+      <div class="control">
+        <div class="control-row"><span>|a|</span><span id="aMagVal"></span></div>
+        <input id="aMag" type="range" min="0" max="1" step="0.001" value="1">
+      </div>
+      <div class="small" id="bMagText">|b| = 0.000</div>
+      <div class="control">
+        <div class="control-row"><span>arg(a)</span><span id="aPhaseVal"></span></div>
+        <input id="aPhase" type="range" min="-3.141592653589793" max="3.141592653589793" step="0.001" value="0">
+      </div>
+      <div class="control">
+        <div class="control-row"><span>arg(b)</span><span id="bPhaseVal"></span></div>
+        <input id="bPhase" type="range" min="-3.141592653589793" max="3.141592653589793" step="0.001" value="0">
+      </div>
+      <div class="small">|b| é calculado automaticamente para manter |a|²+|b|²=1.</div>
+    </div>
+
+    <h3>Estados notáveis</h3>
+    <div class="button-grid">
+      <button class="action" data-preset="0">|0⟩</button>
+      <button class="action" data-preset="1">|1⟩</button>
+      <button class="action" data-preset="+">|+⟩</button>
+      <button class="action" data-preset="-">|−⟩</button>
+      <button class="action" data-preset="+i">|+i⟩</button>
+      <button class="action" data-preset="-i">|−i⟩</button>
+    </div>
+
+    <h3>Portas quânticas</h3>
+    <div class="button-grid">
+      <button class="action" data-gate="X">X</button>
+      <button class="action" data-gate="Y">Y</button>
+      <button class="action" data-gate="Z">Z</button>
+      <button class="action" data-gate="H">H</button>
+      <button class="action" data-gate="S">S</button>
+      <button class="action" data-gate="T">T</button>
+    </div>
+
+    <div class="control">
+      <div class="control-row"><span>α — rotações</span><span id="alphaVal"></span></div>
+      <input id="alpha" type="range" min="-3.141592653589793" max="3.141592653589793" step="0.001" value="0.7853981633974483">
+    </div>
+    <div class="button-grid">
+      <button class="action" data-rot="X">Rx(α)</button>
+      <button class="action" data-rot="Y">Ry(α)</button>
+      <button class="action" data-rot="Z">Rz(α)</button>
+    </div>
+
+    <div class="footer-actions">
+      <button class="action primary" id="resetBtn">Reiniciar em |0⟩</button>
+    </div>
+  </section>
+
+  <section class="panel sphere-wrap">
+    <h2>Esfera de Bloch</h2>
+    <canvas id="blochCanvas"></canvas>
+    <div class="canvas-help">Arraste a esfera com o mouse ou toque para mudar o ângulo de visualização.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Resultados simultâneos</h2>
+    <div id="results" class="results"></div>
+
+    <h3>Código Qiskit equivalente</h3>
+    <div class="small" style="margin-bottom:8px">
+      A página não executa Qiskit no navegador; ela gera o trecho Python equivalente ao estado atual.
+    </div>
+    <pre id="qiskitCode"></pre>
+
+    <h3>Observação</h3>
+    <div class="note">
+      Esta versão representa <b>estados puros</b>, portanto o vetor de Bloch fica na superfície da esfera.
+      Estados mistos exigiriam matriz densidade e poderiam aparecer no interior da esfera.
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const PI = Math.PI;
+  const TAU = 2 * PI;
+  const EPS = 1e-12;
+
+  // ---------- Complexos ----------
+  const C = (re=0, im=0) => ({re, im});
+  const cAdd = (a,b) => C(a.re+b.re, a.im+b.im);
+  const cMul = (a,b) => C(a.re*b.re-a.im*b.im, a.re*b.im+a.im*b.re);
+  const cScale = (a,s) => C(a.re*s, a.im*s);
+  const cConj = a => C(a.re, -a.im);
+  const cAbs2 = a => a.re*a.re + a.im*a.im;
+  const cAbs = a => Math.sqrt(cAbs2(a));
+  const cExp = angle => C(Math.cos(angle), Math.sin(angle));
+  const cArg = a => Math.atan2(a.im,a.re);
+
+  const wrap = a => {
+    let v = (a + PI) % TAU;
+    if (v < 0) v += TAU;
+    v -= PI;
+    return v <= -PI + 1e-12 ? PI : v;
+  };
+
+  const normState = s => {
+    const n = Math.sqrt(cAbs2(s[0]) + cAbs2(s[1]));
+    if (n < EPS) return [C(1,0), C(0,0)];
+    return [cScale(s[0],1/n), cScale(s[1],1/n)];
+  };
+
+  const stateFromBloch = (theta, phi, gamma=0) => {
+    const g = cExp(gamma);
+    const a = cScale(g, Math.cos(theta/2));
+    const b = cMul(g, cScale(cExp(phi), Math.sin(theta/2)));
+    return [a,b];
+  };
+
+  const paramsFromState = st => {
+    const s = normState(st);
+    const [a,b] = s;
+    const p0 = cAbs2(a), p1 = cAbs2(b);
+    const theta = 2*Math.atan2(cAbs(b), cAbs(a));
+    let gamma = 0, phi = 0;
+    if (cAbs(a) > EPS){
+      gamma = cArg(a);
+      phi = cAbs(b)>EPS ? cArg(b)-gamma : 0;
+    } else {
+      gamma = cAbs(b)>EPS ? cArg(b) : 0;
+      phi = 0;
+    }
+    gamma = wrap(gamma);
+    phi = wrap(phi);
+    const prod = cMul(cConj(a),b);
+    const x = 2*prod.re;
+    const y = 2*prod.im;
+    const z = p0-p1;
+    return {s,a,b,p0,p1,theta,phi,gamma,x,y,z};
+  };
+
+  // ---------- Matrizes ----------
+  const matVec = (M,v) => [
+    cAdd(cMul(M[0][0],v[0]), cMul(M[0][1],v[1])),
+    cAdd(cMul(M[1][0],v[0]), cMul(M[1][1],v[1]))
+  ];
+
+  const I = [[C(1),C(0)],[C(0),C(1)]];
+  const X = [[C(0),C(1)],[C(1),C(0)]];
+  const Y = [[C(0),C(0,-1)],[C(0,1),C(0)]];
+  const Z = [[C(1),C(0)],[C(0),C(-1)]];
+  const H = [[C(1/Math.sqrt(2)),C(1/Math.sqrt(2))],
+             [C(1/Math.sqrt(2)),C(-1/Math.sqrt(2))]];
+  const S = [[C(1),C(0)],[C(0),C(0,1)]];
+  const T = [[C(1),C(0)],[C(0),cExp(PI/4)]];
+
+  const Rx = a => {
+    const c=Math.cos(a/2), s=Math.sin(a/2);
+    return [[C(c),C(0,-s)],[C(0,-s),C(c)]];
+  };
+  const Ry = a => {
+    const c=Math.cos(a/2), s=Math.sin(a/2);
+    return [[C(c),C(-s)],[C(s),C(c)]];
+  };
+  const Rz = a => [[cExp(-a/2),C(0)],[C(0),cExp(a/2)]];
+
+  const gateMap = {X,Y,Z,H,S,T};
+
+  // ---------- Estado ----------
+  let state = [C(1,0),C(0,0)];
+  let syncing = false;
+
+  // ---------- DOM ----------
+  const $ = id => document.getElementById(id);
+  const els = {
+    theta:$("theta"), phi:$("phi"), gamma:$("gamma"),
+    p0:$("p0"), probPhi:$("probPhi"),
+    aMag:$("aMag"), aPhase:$("aPhase"), bPhase:$("bPhase"),
+    alpha:$("alpha"),
+    thetaVal:$("thetaVal"), phiVal:$("phiVal"), gammaVal:$("gammaVal"),
+    p0Val:$("p0Val"), probPhiVal:$("probPhiVal"),
+    aMagVal:$("aMagVal"), aPhaseVal:$("aPhaseVal"), bPhaseVal:$("bPhaseVal"),
+    alphaVal:$("alphaVal"),
+    p1Text:$("p1Text"), bMagText:$("bMagText"),
+    results:$("results"), qiskitCode:$("qiskitCode"),
+    canvas:$("blochCanvas")
+  };
+
+  const fmt = (n,d=4) => (Math.abs(n)<1e-12?0:n).toFixed(d);
+  const fmtC = z => {
+    const re=Math.abs(z.re)<1e-10?0:z.re;
+    const im=Math.abs(z.im)<1e-10?0:z.im;
+    if (Math.abs(im)<1e-10) return fmt(re);
+    const sign=im>=0?"+":"−";
+    return `${fmt(re)} ${sign} ${fmt(Math.abs(im))}i`;
+  };
+
+  function updateLabels(){
+    els.thetaVal.textContent = `${(+els.theta.value).toFixed(3)} rad`;
+    els.phiVal.textContent = `${(+els.phi.value).toFixed(3)} rad`;
+    els.gammaVal.textContent = `${(+els.gamma.value).toFixed(3)} rad`;
+    els.p0Val.textContent = (+els.p0.value).toFixed(3);
+    els.probPhiVal.textContent = `${(+els.probPhi.value).toFixed(3)} rad`;
+    els.aMagVal.textContent = (+els.aMag.value).toFixed(3);
+    els.aPhaseVal.textContent = `${(+els.aPhase.value).toFixed(3)} rad`;
+    els.bPhaseVal.textContent = `${(+els.bPhase.value).toFixed(3)} rad`;
+    els.alphaVal.textContent = `${(+els.alpha.value).toFixed(3)} rad`;
+  }
+
+  function setState(newState){
+    state = normState(newState);
+    const p = paramsFromState(state);
+
+    syncing = true;
+    els.theta.value=p.theta;
+    els.phi.value=p.phi;
+    els.gamma.value=p.gamma;
+
+    els.p0.value=p.p0;
+    els.probPhi.value=p.phi;
+
+    els.aMag.value=cAbs(p.a);
+    els.aPhase.value=cAbs(p.a)>EPS ? wrap(cArg(p.a)) : 0;
+    els.bPhase.value=cAbs(p.b)>EPS ? wrap(cArg(p.b)) : 0;
+
+    els.p1Text.textContent=`P(1) = ${p.p1.toFixed(3)}`;
+    els.bMagText.textContent=`|b| = ${cAbs(p.b).toFixed(3)}`;
+    syncing=false;
+
+    updateLabels();
+    updateResults(p);
+    drawBloch(p);
+  }
+
+  function updateResults(p){
+    const r=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);
+    const pxp=(1+p.x)/2, pxm=(1-p.x)/2;
+    const pyp=(1+p.y)/2, pym=(1-p.y)/2;
+
+    els.results.textContent =
+`ESTADO ATUAL
+
+|ψ⟩ = a|0⟩ + b|1⟩
+
+a = ${fmtC(p.a)}
+b = ${fmtC(p.b)}
+
+Normalização:
+|a|² + |b|² = ${p.p0.toFixed(6)} + ${p.p1.toFixed(6)}
+             = ${(p.p0+p.p1).toFixed(6)}
+
+PROBABILIDADES — BASE Z
+
+P(0) = ${p.p0.toFixed(6)}
+P(1) = ${p.p1.toFixed(6)}
+
+ÂNGULOS
+
+θ = ${p.theta.toFixed(6)} rad = ${(p.theta*180/PI).toFixed(2)}°
+φ = ${p.phi.toFixed(6)} rad = ${(p.phi*180/PI).toFixed(2)}°
+γ = ${p.gamma.toFixed(6)} rad = ${(p.gamma*180/PI).toFixed(2)}°
+
+VETOR DE BLOCH
+
+x = 2 Re(a* b) = ${p.x.toFixed(6)}
+y = 2 Im(a* b) = ${p.y.toFixed(6)}
+z = |a|²−|b|² = ${p.z.toFixed(6)}
+
+r = √(x²+y²+z²) = ${r.toFixed(6)}
+
+VALORES ESPERADOS
+
+⟨X⟩ = ${p.x.toFixed(6)}
+⟨Y⟩ = ${p.y.toFixed(6)}
+⟨Z⟩ = ${p.z.toFixed(6)}
+
+MEDIÇÕES
+
+Base X:
+P(+x) = ${pxp.toFixed(6)}
+P(−x) = ${pxm.toFixed(6)}
+
+Base Y:
+P(+y) = ${pyp.toFixed(6)}
+P(−y) = ${pym.toFixed(6)}
+
+Base Z:
+P(0) = ${p.p0.toFixed(6)}
+P(1) = ${p.p1.toFixed(6)}`;
+
+    const gp = p.gamma + p.phi/2;
+    els.qiskitCode.textContent =
+`from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector
+
+theta = ${p.theta.toFixed(12)}
+phi   = ${p.phi.toFixed(12)}
+gamma = ${p.gamma.toFixed(12)}
+
+qc = QuantumCircuit(1)
+
+qc.ry(theta, 0)
+qc.rz(phi, 0)
+
+# Igualdade vetorial exata:
+qc.global_phase = gamma + phi/2
+
+psi = Statevector(qc)
+
+print(psi)
+print(psi.probabilities_dict())`;
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll(".tabbtn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".tabcontent").forEach(c=>c.classList.remove("active"));
+      btn.classList.add("active");
+      $(btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ---------- Sliders ----------
+  ["theta","phi","gamma"].forEach(id=>{
+    els[id].addEventListener("input",()=>{
+      if(syncing) return;
+      updateLabels();
+      setState(stateFromBloch(+els.theta.value,+els.phi.value,+els.gamma.value));
+    });
+  });
+
+  ["p0","probPhi"].forEach(id=>{
+    els[id].addEventListener("input",()=>{
+      if(syncing) return;
+      updateLabels();
+      const p0=Math.min(1,Math.max(0,+els.p0.value));
+      const theta=2*Math.acos(Math.sqrt(p0));
+      const gamma=paramsFromState(state).gamma;
+      setState(stateFromBloch(theta,+els.probPhi.value,gamma));
+    });
+  });
+
+  ["aMag","aPhase","bPhase"].forEach(id=>{
+    els[id].addEventListener("input",()=>{
+      if(syncing) return;
+      updateLabels();
+      const am=Math.min(1,Math.max(0,+els.aMag.value));
+      const bm=Math.sqrt(Math.max(0,1-am*am));
+      const a=cScale(cExp(+els.aPhase.value),am);
+      const b=cScale(cExp(+els.bPhase.value),bm);
+      setState([a,b]);
+    });
+  });
+
+  els.alpha.addEventListener("input",updateLabels);
+
+  // ---------- Presets ----------
+  const presets = {
+    "0":[C(1),C(0)],
+    "1":[C(0),C(1)],
+    "+":[C(1/Math.sqrt(2)),C(1/Math.sqrt(2))],
+    "-":[C(1/Math.sqrt(2)),C(-1/Math.sqrt(2))],
+    "+i":[C(1/Math.sqrt(2)),C(0,1/Math.sqrt(2))],
+    "-i":[C(1/Math.sqrt(2)),C(0,-1/Math.sqrt(2))]
+  };
+  document.querySelectorAll("[data-preset]").forEach(btn=>{
+    btn.addEventListener("click",()=>setState(presets[btn.dataset.preset]));
+  });
+
+  document.querySelectorAll("[data-gate]").forEach(btn=>{
+    btn.addEventListener("click",()=>setState(matVec(gateMap[btn.dataset.gate],state)));
+  });
+
+  document.querySelectorAll("[data-rot]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const a=+els.alpha.value;
+      const M=btn.dataset.rot==="X"?Rx(a):btn.dataset.rot==="Y"?Ry(a):Rz(a);
+      setState(matVec(M,state));
+    });
+  });
+
+  $("resetBtn").addEventListener("click",()=>setState([C(1),C(0)]));
+
+  // ---------- Canvas 3D ----------
+  const canvas=els.canvas;
+  const ctx=canvas.getContext("2d");
+  let yaw=0.65, pitch=-0.35;
+  let dragging=false,lastX=0,lastY=0;
+
+  function resizeCanvas(){
+    const dpr=window.devicePixelRatio||1;
+    const rect=canvas.getBoundingClientRect();
+    canvas.width=Math.max(10,Math.floor(rect.width*dpr));
+    canvas.height=Math.max(10,Math.floor(rect.height*dpr));
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    drawBloch(paramsFromState(state));
+  }
+  window.addEventListener("resize",resizeCanvas);
+
+  function rotate3(p){
+    let [x,y,z]=p;
+    // yaw em torno de y
+    const cy=Math.cos(yaw), sy=Math.sin(yaw);
+    let x1=cy*x+sy*z;
+    let z1=-sy*x+cy*z;
+    let y1=y;
+    // pitch em torno de x
+    const cp=Math.cos(pitch), sp=Math.sin(pitch);
+    let y2=cp*y1-sp*z1;
+    let z2=sp*y1+cp*z1;
+    return [x1,y2,z2];
+  }
+
+  function project(p, cx, cy, R){
+    const [x,y,z]=rotate3(p);
+    return [cx+R*x, cy-R*y, z];
+  }
+
+  function line3(a,b,cx,cy,R,style,width=1,alpha=1){
+    const A=project(a,cx,cy,R),B=project(b,cx,cy,R);
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=style;
+    ctx.lineWidth=width;
+    ctx.beginPath();
+    ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function path3(points,cx,cy,R,style,width=1,alpha=1){
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=style;
+    ctx.lineWidth=width;
+    ctx.beginPath();
+    points.forEach((p,i)=>{
+      const q=project(p,cx,cy,R);
+      if(i===0) ctx.moveTo(q[0],q[1]); else ctx.lineTo(q[0],q[1]);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function text3(text,p,cx,cy,R,style="#18212b"){
+    const q=project(p,cx,cy,R);
+    ctx.fillStyle=style;
+    ctx.font="13px Segoe UI, Arial";
+    ctx.fillText(text,q[0]+5,q[1]-5);
+  }
+
+  function arrow3(end,cx,cy,R){
+    const O=project([0,0,0],cx,cy,R), E=project(end,cx,cy,R);
+    ctx.save();
+    ctx.strokeStyle="#2f6fed";
+    ctx.fillStyle="#2f6fed";
+    ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(O[0],O[1]);ctx.lineTo(E[0],E[1]);ctx.stroke();
+
+    const ang=Math.atan2(E[1]-O[1],E[0]-O[0]);
+    const size=13;
+    ctx.beginPath();
+    ctx.moveTo(E[0],E[1]);
+    ctx.lineTo(E[0]-size*Math.cos(ang-0.45),E[1]-size*Math.sin(ang-0.45));
+    ctx.lineTo(E[0]-size*Math.cos(ang+0.45),E[1]-size*Math.sin(ang+0.45));
+    ctx.closePath();ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(E[0],E[1],6,0,TAU);
+    ctx.fillStyle="#7048e8";ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBloch(p){
+    const rect=canvas.getBoundingClientRect();
+    const w=rect.width,h=rect.height;
+    if(w<10||h<10) return;
+    ctx.clearRect(0,0,w,h);
+
+    const cx=w/2,cy=h/2;
+    const R=Math.min(w,h)*0.36;
+
+    // círculos de latitude
+    for(let k=-3;k<=3;k++){
+      const z=k/4;
+      const rr=Math.sqrt(Math.max(0,1-z*z));
+      const pts=[];
+      for(let i=0;i<=120;i++){
+        const t=TAU*i/120;
+        pts.push([rr*Math.cos(t),rr*Math.sin(t),z]);
+      }
+      path3(pts,cx,cy,R,"#9bb0c5",0.8,0.35);
+    }
+
+    // meridianos
+    for(let m=0;m<8;m++){
+      const az=PI*m/4;
+      const pts=[];
+      for(let i=0;i<=120;i++){
+        const t=PI*i/120;
+        pts.push([Math.sin(t)*Math.cos(az),Math.sin(t)*Math.sin(az),Math.cos(t)]);
+      }
+      path3(pts,cx,cy,R,"#9bb0c5",0.8,0.35);
+    }
+
+    // equadores principais
+    let pts=[];
+    for(let i=0;i<=180;i++){let t=TAU*i/180;pts.push([Math.cos(t),Math.sin(t),0]);}
+    path3(pts,cx,cy,R,"#607d9c",1.2,0.65);
+    pts=[];
+    for(let i=0;i<=180;i++){let t=TAU*i/180;pts.push([Math.cos(t),0,Math.sin(t)]);}
+    path3(pts,cx,cy,R,"#607d9c",1.2,0.55);
+    pts=[];
+    for(let i=0;i<=180;i++){let t=TAU*i/180;pts.push([0,Math.cos(t),Math.sin(t)]);}
+    path3(pts,cx,cy,R,"#607d9c",1.2,0.55);
+
+    // eixos
+    line3([-1.2,0,0],[1.2,0,0],cx,cy,R,"#34495e",1.4,.8);
+    line3([0,-1.2,0],[0,1.2,0],cx,cy,R,"#34495e",1.4,.8);
+    line3([0,0,-1.2],[0,0,1.2],cx,cy,R,"#34495e",1.4,.8);
+
+    text3("|+⟩  +x",[1.22,0,0],cx,cy,R);
+    text3("|−⟩  −x",[-1.35,0,0],cx,cy,R);
+    text3("|+i⟩  +y",[0,1.22,0],cx,cy,R);
+    text3("|−i⟩  −y",[0,-1.34,0],cx,cy,R);
+    text3("|0⟩  +z",[0,0,1.22],cx,cy,R);
+    text3("|1⟩  −z",[0,0,-1.32],cx,cy,R);
+
+    arrow3([p.x,p.y,p.z],cx,cy,R);
+
+    ctx.fillStyle="#18212b";
+    ctx.font="bold 15px Segoe UI, Arial";
+    ctx.fillText(`r = (${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)})`,18,28);
+  }
+
+  canvas.addEventListener("pointerdown",e=>{
+    dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    const dx=e.clientX-lastX,dy=e.clientY-lastY;
+    lastX=e.clientX;lastY=e.clientY;
+    yaw += dx*0.008;
+    pitch += dy*0.008;
+    pitch=Math.max(-1.45,Math.min(1.45,pitch));
+    drawBloch(paramsFromState(state));
+  });
+  canvas.addEventListener("pointerup",()=>dragging=false);
+  canvas.addEventListener("pointercancel",()=>dragging=false);
+
+  updateLabels();
+  setState(state);
+  setTimeout(resizeCanvas,50);
+})();
+</script>
+</body>
+</html>
